@@ -40,8 +40,6 @@ printf "%s\n" "Dostępne opcje:" \
 	"--hot (strona) (czas: 6, 12 lub 24): zwraca ID, datę i ilość plusów postów z gorących"
 }
 
-if [ -z "$1" ]; then usage; fi	# sprawdzamy czy użytkownik podał parametry, jeśli nie to wyrzucamy usage
-
 ## Sprawdzamy czy config w ogóle istnieje
 if [ ! -d "$HOME/.config/mirkobash" ]; then	# folder instnieje?
 	mkdir "$HOME/.config/mirkobash"
@@ -56,6 +54,8 @@ userkey=\"\"
 " > "$HOME/.config/mirkobash/mirkobash.conf"
 	fi
 fi
+
+if [ -z "$1" ]; then usage; fi	# sprawdzamy czy użytkownik podał parametry, jeśli nie to wyrzucamy usage
 
 ## Load settings:
 . "$HOME/.config/mirkobash/mirkobash.conf"		# ładujemy config

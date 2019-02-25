@@ -1,11 +1,12 @@
 #!/bin/bash
 
 author="Bielecki"
-version="0.0.3"
-lastupdate="19.02.2019"
+version="0.0.4"
+lastupdate="25.02.2019"
 
 ## Changelog
 #
+# 0.0.4 - moving hot to hot_stats; hot function is now for reading mirko
 # 0.0.3 - moved config data to ~/.config/mirkobash/, added polish comments
 # 0.0.2 - added hot page scrapping
 # 0.0.1 - initial version - post and quick login with userkey updating
@@ -21,6 +22,8 @@ if [ -n "$1" ]; then		# użytkownik podał parametr, więc sprawdźmy który to 
 	--post)	shift && post "$@"
 		;;
 	--hot)	shift && hot "$@"
+		;;
+	--hot_stats) shift && hot_stats "$@"
 		;;
 	--help | --usage | -h | -\? | -u)	usage; exit 0
 		;;
@@ -70,7 +73,27 @@ md5all=$(echo -n "$secret$url$data2" | md5sum | awk '{print $1}')
 }
 
 
-hot() {		# funkcja wyświetlania gorących
+hot() {		# funkcja wyświetlania gorących do czytania
+if [ -z "$1" -o -z "$2" ]; then	# jeśli użytkownik nie podał parametrów, odeślij do usage
+	usage
+	exit 1
+fi
+page="$1"	# pobieramy stronę z parametru pierwszego
+period="$2"	# pobieramy zakres czasu z parametru drugiego
+url="https://a2.wykop.pl/Entries/Hot/page/$page/period/$period/appkey/$appkey/token/$token/userkey/$userkey/"
+sign
+content=$(curl -s -H "apisign: $md5all" -X GET "$url" | grep -oP '((?<="body":")(\\"|[^"])*)')
+content_count=$(wc -l <<< "$content")
+for ((i = 1; i <= "$content_count"; i++)); do
+	printf "%b" "$(sed -n "${i}p" <<< $content | sed 's,<br \\/>,,g;s,<a href=[^>]*>,,g;s,<\\/a>,,g;s,&quot;,",g' )" "\n"
+	echo ""; read -e -p "Czytać dalej? (Y/n)  " YN
+	[[ "$YN" == "n" || "$YN" == "N" ]] && break
+done
+exit 0
+}
+
+
+hot_stats() {		# funkcja wyświetlania statystyk gorących
 if [ -z "$1" -o -z "$2" ]; then	# jeśli użytkownik nie podał parametrów, odeślij do usage
 	usage
 	exit 1

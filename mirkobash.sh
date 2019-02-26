@@ -1,11 +1,12 @@
 #!/bin/bash
 
 author="Bielecki"
-version="0.0.4"
-lastupdate="25.02.2019"
+version="0.0.5"
+lastupdate="26.02.2019"
 
 ## Changelog
 #
+# 0.0.5 - infos about entries and coloring some shit
 # 0.0.4 - moving hot to hot_stats; hot function is now for reading mirko
 # 0.0.3 - moved config data to ~/.config/mirkobash/, added polish comments
 # 0.0.2 - added hot page scrapping
@@ -82,12 +83,20 @@ page="$1"	# pobieramy stronę z parametru pierwszego
 period="$2"	# pobieramy zakres czasu z parametru drugiego
 url="https://a2.wykop.pl/Entries/Hot/page/$page/period/$period/appkey/$appkey/token/$token/userkey/$userkey/"
 sign
-content=$(curl -s -H "apisign: $md5all" -X GET "$url" | grep -oP '((?<="body":")(\\"|[^"])*)')
-content_count=$(wc -l <<< "$content")
-for ((i = 1; i <= "$content_count"; i++)); do
-	printf "%b" "$(sed -n "${i}p" <<< $content | sed 's,<br \\/>,,g;s,<a href=[^>]*>,,g;s,<\\/a>,,g;s,&quot;,",g' )" "\n"
-	echo ""; read -e -p "Czytać dalej? (Y/n)  " YN
-	[[ "$YN" == "n" || "$YN" == "N" ]] && break
+content=$(curl -s -H "apisign: $md5all" -X GET "$url")	# ładujemy cały content
+body=$(grep -oP '((?<="body":")(\\"|[^"])*)' <<< "$content")	# wyciąg treści wpisów
+id_list=$(grep -oP '((?<="id":)[^,]*)' <<< "$content")	# wyciąg ID wpisów
+date_list=$(grep -oP '((?<="date":")[^"]*)' <<< "$content")	# wyciąg dat wpisów
+votes_list=$(grep -oP '((?<="vote_count":)[^,]*)' <<< "$content")	# wyciąg plusów wpisów
+content_count=$(wc -l <<< "$id_list")	# liczymy ilość wpisów na stronie na podstawie listy ID (body może być puste, gdy ktoś wstawia sam obrazek)
+					# [NOTE] czy nie popierdoli się łączenie ID z body w takim wypadku? Może body jest, ale tylko puste? Do sprawdzenia.
+					# [NOTE] up sprawdzone - pierdoli się. To nie tak, że body jest puste, jego po prostu nie ma...
+for ((i = 1; i <= "$content_count"; i++)); do	# otwieramy pętlę przez wszystkie wpisy
+	printf "\033[0m%b\033[0;36m%b\t" "ID wpisu: " "$(sed -n "${i}p" <<< $id_list )" "Data: " "$(sed -n "${i}p" <<< $date_list )" "Ilość plusów: " "$(sed -n "${i}p" <<< $votes_list )"	# wypisujemy info na temat wpisu
+	printf "\033[0m"	# mały reset koloru
+	printf "\n%b\n" "$(sed -n "${i}p" <<< $body | sed 's,<br \\/>,,g;s,<a href=[^>]*>,,g;s,<\\/a>,,g;s,&quot;,",g' )" # tu wypisujemy treść wpisu
+	echo ""; read -e -p "Czytać dalej? (Y/n)  " YN	# pytamy się użytkownika czy chce czytać dalej
+	[[ "$YN" == "n" || "$YN" == "N" ]] && break	# jeśli user stwierdzi że dość, to przerwij pętlę
 done
 exit 0
 }

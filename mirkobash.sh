@@ -1,11 +1,12 @@
 #!/bin/bash
 
 author="Bielecki"
-version="0.0.5"
-lastupdate="26.02.2019"
+version="0.0.6"
+lastupdate="27.02.2019"
 
 ## Changelog
 #
+# 0.0.6 - reading hot logic rebuilded, fixed no "body" issue
 # 0.0.5 - infos about entries and coloring some shit
 # 0.0.4 - moving hot to hot_stats; hot function is now for reading mirko
 # 0.0.3 - moved config data to ~/.config/mirkobash/, added polish comments
@@ -83,20 +84,30 @@ page="$1"	# pobieramy stronę z parametru pierwszego
 period="$2"	# pobieramy zakres czasu z parametru drugiego
 url="https://a2.wykop.pl/Entries/Hot/page/$page/period/$period/appkey/$appkey/token/$token/userkey/$userkey/"
 sign
-content=$(curl -s -H "apisign: $md5all" -X GET "$url")	# ładujemy cały content
-body=$(grep -oP '((?<="body":")(\\"|[^"])*)' <<< "$content")	# wyciąg treści wpisów
-id_list=$(grep -oP '((?<="id":)[^,]*)' <<< "$content")	# wyciąg ID wpisów
-date_list=$(grep -oP '((?<="date":")[^"]*)' <<< "$content")	# wyciąg dat wpisów
-votes_list=$(grep -oP '((?<="vote_count":)[^,]*)' <<< "$content")	# wyciąg plusów wpisów
-content_count=$(wc -l <<< "$id_list")	# liczymy ilość wpisów na stronie na podstawie listy ID (body może być puste, gdy ktoś wstawia sam obrazek)
-					# [NOTE] czy nie popierdoli się łączenie ID z body w takim wypadku? Może body jest, ale tylko puste? Do sprawdzenia.
-					# [NOTE] up sprawdzone - pierdoli się. To nie tak, że body jest puste, jego po prostu nie ma...
+content=$(curl -s -H "apisign: $md5all" -X GET "$url" | sed 's/,{"id"/\n{"id"/g')	# ładujemy cały content i dzielimy zwrotkę na linie, po jednym wpisie każda
+content_count=$(wc -l <<< "$content")	# liczymy ilość wpisów po ilości linii po podziale
 for ((i = 1; i <= "$content_count"; i++)); do	# otwieramy pętlę przez wszystkie wpisy
-	printf "\033[0m%b\033[0;36m%b\t" "ID wpisu: " "$(sed -n "${i}p" <<< $id_list )" "Data: " "$(sed -n "${i}p" <<< $date_list )" "Ilość plusów: " "$(sed -n "${i}p" <<< $votes_list )"	# wypisujemy info na temat wpisu
+	entry=$(sed -n "${i}p" <<< "$content")	# ładujemy n-ty wpis jako pojedynczy wpis (a nie jako grupa)
+	id=$(grep -oP '((?<="id":)[^,]*)' <<< "$entry")	# ładujemy ID wpisu
+	date=$(grep -oP '((?<="date":")[^"]*)' <<< "$entry")	# ładujemy datę wpisu
+	votes=$(grep -oP '((?<="vote_count":)[^,]*)' <<< "$entry")	# ładujemy ilość plusów
+	body=$(grep -oP '((?<="body":")(\\"|[^"])*)' <<< "$entry" | sed 's,<br \\/>,,g;s,<a href=[^>]*>,,g;s,<\\/a>,,g;s,&quot;,",g' )	# ładujemy treść wpisu, jeśli jest ( ͡° ͜ʖ ͡°)
+	author=$(grep -oP '((?<="login":")(\\"|[^"])*)' <<< "$entry")	# ładujemy autora wpisu
+	embed=$(grep -oP '((?<="url":")(\\"|[^"])*)' <<< "$entry" | sed 's,\\,,g')	# ładujemy załącznik, jeśli jest
+
+	printf "\n\033[1;33m%b\033[0;36m%b" "ID wpisu: " "$id" "Autor: " "$author" "Data: " "$date" "Ilość plusów: " "$votes"	# wypisujemy info na temat wpisu
 	printf "\033[0m"	# mały reset koloru
-	printf "\n%b\n" "$(sed -n "${i}p" <<< $body | sed 's,<br \\/>,,g;s,<a href=[^>]*>,,g;s,<\\/a>,,g;s,&quot;,",g' )" # tu wypisujemy treść wpisu
+	if [ -n "$body" ]; then	# jeśli body nie jest puste...
+		printf "\n\n%b\n" "$body" # ...wypisujemy treść wpisu
+	else	# a jeśli jest
+		printf "\n\n\033[1;31m%b\033[0m\n" "Ten wpis nie zawiera treści :("
+	fi
+	if [ -n "$embed" ]; then	# sprawdzamy czy jest załącznik, np. jakieś zdjęcie
+		printf "\n\033[0;93m%b\033[0;36m%b\033[0m\n" "Ten wpis zawiera załącznik dostępny tutaj: " "$embed"
+	fi
 	echo ""; read -e -p "Czytać dalej? (Y/n)  " YN	# pytamy się użytkownika czy chce czytać dalej
 	[[ "$YN" == "n" || "$YN" == "N" ]] && break	# jeśli user stwierdzi że dość, to przerwij pętlę
+
 done
 exit 0
 }

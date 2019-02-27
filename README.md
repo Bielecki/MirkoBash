@@ -75,7 +75,7 @@ Parametr `--hot` służy do przeglądania gorących wpisów. Zwraca ID, autora, 
 
 Aby poprawnie uzyć tego parametru należy wpisać np:
 
-`./mirkobash.sh --hot 1 24"` - gdzie `1` to strona pierwsza (może być druga czy dziesiąta), a `24` to okres czasu w godzinach, z których chcemy pobrać gorące wpisy.
+`./mirkobash.sh --hot 1 24` - gdzie `1` to strona pierwsza (może być druga czy dziesiąta), a `24` to okres czasu w godzinach, z których chcemy pobrać gorące wpisy.
 
 Zwrot będzie wyglądać w następujący sposób:
 

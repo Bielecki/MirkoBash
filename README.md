@@ -99,11 +99,11 @@ Użytkownik może w każdej chwili przerwać przeglądanie odpowiadając literą
 #### Plusowanie
 Podczas przeglądania wpisów użytkownik może zdecydować by dać plus wpisowi. W takiej sytuacji na pytanie "Czytać dalej" może odpowiedzieć znakiem `+`, który spowoduje zaplusowanie wpisu i wyświetlenie kolejnego.
 
-### `--hot-stats`
-Parametr `--hot-stats` służy do pobrania podstawowych informacji o gorących wpisach. Zwraca ID wpisu, datę i godzinę jego wstawienia oraz ilość plusów, które otrzymał.
+### `--hot_stats`
+Parametr `--hot_stats` służy do pobrania podstawowych informacji o gorących wpisach. Zwraca ID wpisu, datę i godzinę jego wstawienia oraz ilość plusów, które otrzymał.
 
 Aby poprawnie użyć tego parametru należy skrypt wywołać np. w ten sposób:
-`./mirkobash.sh --hot-stats 1 24` - gdzie `1` to strona pierwsza (może być druga czy dziesiąta), a `24` to okres czasu w godzinach, z których chcemy pobrać informacje o gorących wpisach. Okres czasu jest ustalany przez serwis Wykop, dlatego mimo że skrypt przyjmie każdą wartość, to Wykop ograniczy go do 24h, 12h lub 6h (z tego co mi wiadomo poprawnie działają też parametry od 1 do 5 godzin).
+`./mirkobash.sh --hot_stats 1 24` - gdzie `1` to strona pierwsza (może być druga czy dziesiąta), a `24` to okres czasu w godzinach, z których chcemy pobrać informacje o gorących wpisach. Okres czasu jest ustalany przez serwis Wykop, dlatego mimo że skrypt przyjmie każdą wartość, to Wykop ograniczy go do 24h, 12h lub 6h (z tego co mi wiadomo poprawnie działają też parametry od 1 do 5 godzin).
 
 Zwrócone informacje będą wyglądać w ten sposób:
 

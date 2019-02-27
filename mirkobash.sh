@@ -1,11 +1,12 @@
 #!/bin/bash
 
 author="Bielecki"
-version="0.0.6"
+version="0.0.7"
 lastupdate="27.02.2019"
 
 ## Changelog
 #
+# 0.0.7 - added liking entries while reading hot pages
 # 0.0.6 - reading hot logic rebuilded, fixed no "body" issue
 # 0.0.5 - infos about entries and coloring some shit
 # 0.0.4 - moving hot to hot_stats; hot function is now for reading mirko
@@ -75,6 +76,15 @@ md5all=$(echo -n "$secret$url$data2" | md5sum | awk '{print $1}')
 }
 
 
+like() {	# dawanie plusów wpisom
+url="https://a2.wykop.pl/Entries/VoteUp/$id/appkey/$appkey/token/$token/userkey/$userkey/"
+sign
+curl -s -H "apisign: $md5all" -X GET "$url" > /dev/null 2>&1	# curl zwraca listę wszystkich plusujących
+echo "Zaplusowano powyższy wpis"	# nie wiem jeszcze jak sprawdzać czy się powiodło
+sleep 1
+}
+
+
 hot() {		# funkcja wyświetlania gorących do czytania
 if [ -z "$1" -o -z "$2" ]; then	# jeśli użytkownik nie podał parametrów, odeślij do usage
 	usage
@@ -105,9 +115,9 @@ for ((i = 1; i <= "$content_count"; i++)); do	# otwieramy pętlę przez wszystki
 	if [ -n "$embed" ]; then	# sprawdzamy czy jest załącznik, np. jakieś zdjęcie
 		printf "\n\033[0;93m%b\033[0;36m%b\033[0m\n" "Ten wpis zawiera załącznik dostępny tutaj: " "$embed"
 	fi
-	echo ""; read -e -p "Czytać dalej? (Y/n)  " YN	# pytamy się użytkownika czy chce czytać dalej
+	echo ""; read -e -p "Czytać dalej? (Y/n/+)  " YN	# pytamy się użytkownika czy chce czytać dalej
 	[[ "$YN" == "n" || "$YN" == "N" ]] && break	# jeśli user stwierdzi że dość, to przerwij pętlę
-
+	[[ "$YN" == "+" ]] && like
 done
 exit 0
 }

@@ -74,7 +74,8 @@ To samo można osiągnąć przy użyciu `crontab`.
 Parametr `--hot` służy do przeglądania gorących wpisów. Zwraca ID, autora, datę i godzinę, ilość plusów, i ewentualnie treść i załącznik (nie wszystkie wpisy posiadają treść i nie wszystkie mają załącznik).
 
 Aby poprawnie uzyć tego parametru należy wpisać np:
-`./mirkobash.sh --hot 1 24" - gdzie `1` to strona pierwsza (może być druga czy dziesiąta), a `24` to okres czasu w godzinach, z których chcemy pobrać gorące wpisy.
+
+`./mirkobash.sh --hot 1 24"` - gdzie `1` to strona pierwsza (może być druga czy dziesiąta), a `24` to okres czasu w godzinach, z których chcemy pobrać gorące wpisy.
 
 Zwrot będzie wyglądać w następujący sposób:
 

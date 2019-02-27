@@ -1,11 +1,15 @@
 #!/bin/bash
 
 author="Bielecki"
-version="0.0.3"
-lastupdate="19.02.2019"
+version="0.0.7"
+lastupdate="27.02.2019"
 
 ## Changelog
 #
+# 0.0.7 - added liking entries while reading hot pages
+# 0.0.6 - reading hot logic rebuilded, fixed no "body" issue
+# 0.0.5 - infos about entries and coloring some shit
+# 0.0.4 - moving hot to hot_stats; hot function is now for reading mirko
 # 0.0.3 - moved config data to ~/.config/mirkobash/, added polish comments
 # 0.0.2 - added hot page scrapping
 # 0.0.1 - initial version - post and quick login with userkey updating
@@ -21,6 +25,8 @@ if [ -n "$1" ]; then		# użytkownik podał parametr, więc sprawdźmy który to 
 	--post)	shift && post "$@"
 		;;
 	--hot)	shift && hot "$@"
+		;;
+	--hot_stats) shift && hot_stats "$@"
 		;;
 	--help | --usage | -h | -\? | -u)	usage; exit 0
 		;;
@@ -70,7 +76,54 @@ md5all=$(echo -n "$secret$url$data2" | md5sum | awk '{print $1}')
 }
 
 
-hot() {		# funkcja wyświetlania gorących
+like() {	# dawanie plusów wpisom
+url="https://a2.wykop.pl/Entries/VoteUp/$id/appkey/$appkey/token/$token/userkey/$userkey/"
+sign
+curl -s -H "apisign: $md5all" -X GET "$url" > /dev/null 2>&1	# curl zwraca listę wszystkich plusujących
+echo "Zaplusowano powyższy wpis"	# nie wiem jeszcze jak sprawdzać czy się powiodło
+sleep 1
+}
+
+
+hot() {		# funkcja wyświetlania gorących do czytania
+if [ -z "$1" -o -z "$2" ]; then	# jeśli użytkownik nie podał parametrów, odeślij do usage
+	usage
+	exit 1
+fi
+page="$1"	# pobieramy stronę z parametru pierwszego
+period="$2"	# pobieramy zakres czasu z parametru drugiego
+url="https://a2.wykop.pl/Entries/Hot/page/$page/period/$period/appkey/$appkey/token/$token/userkey/$userkey/"
+sign
+content=$(curl -s -H "apisign: $md5all" -X GET "$url" | sed 's/,{"id"/\n{"id"/g')	# ładujemy cały content i dzielimy zwrotkę na linie, po jednym wpisie każda
+content_count=$(wc -l <<< "$content")	# liczymy ilość wpisów po ilości linii po podziale
+for ((i = 1; i <= "$content_count"; i++)); do	# otwieramy pętlę przez wszystkie wpisy
+	entry=$(sed -n "${i}p" <<< "$content")	# ładujemy n-ty wpis jako pojedynczy wpis (a nie jako grupa)
+	id=$(grep -oP '((?<="id":)[^,]*)' <<< "$entry")	# ładujemy ID wpisu
+	date=$(grep -oP '((?<="date":")[^"]*)' <<< "$entry")	# ładujemy datę wpisu
+	votes=$(grep -oP '((?<="vote_count":)[^,]*)' <<< "$entry")	# ładujemy ilość plusów
+	body=$(grep -oP '((?<="body":")(\\"|[^"])*)' <<< "$entry" | sed 's,<br \\/>,,g;s,<a href=[^>]*>,,g;s,<\\/a>,,g;s,&quot;,",g' )	# ładujemy treść wpisu, jeśli jest ( ͡° ͜ʖ ͡°)
+	author=$(grep -oP '((?<="login":")(\\"|[^"])*)' <<< "$entry")	# ładujemy autora wpisu
+	embed=$(grep -oP '((?<="url":")(\\"|[^"])*)' <<< "$entry" | sed 's,\\,,g')	# ładujemy załącznik, jeśli jest
+
+	printf "\n\033[1;33m%b\033[0;36m%b" "ID wpisu: " "$id" "Autor: " "$author" "Data: " "$date" "Ilość plusów: " "$votes"	# wypisujemy info na temat wpisu
+	printf "\033[0m"	# mały reset koloru
+	if [ -n "$body" ]; then	# jeśli body nie jest puste...
+		printf "\n\n%b\n" "$body" # ...wypisujemy treść wpisu
+	else	# a jeśli jest
+		printf "\n\n\033[1;31m%b\033[0m\n" "Ten wpis nie zawiera treści :("
+	fi
+	if [ -n "$embed" ]; then	# sprawdzamy czy jest załącznik, np. jakieś zdjęcie
+		printf "\n\033[0;93m%b\033[0;36m%b\033[0m\n" "Ten wpis zawiera załącznik dostępny tutaj: " "$embed"
+	fi
+	echo ""; read -e -p "Czytać dalej? (Y/n/+)  " YN	# pytamy się użytkownika czy chce czytać dalej
+	[[ "$YN" == "n" || "$YN" == "N" ]] && break	# jeśli user stwierdzi że dość, to przerwij pętlę
+	[[ "$YN" == "+" ]] && like
+done
+exit 0
+}
+
+
+hot_stats() {		# funkcja wyświetlania statystyk gorących
 if [ -z "$1" -o -z "$2" ]; then	# jeśli użytkownik nie podał parametrów, odeślij do usage
 	usage
 	exit 1

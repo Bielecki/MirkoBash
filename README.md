@@ -71,10 +71,39 @@ Przy pomocy programu `at` (`sudo apt-get install at`) możemy zaplanować wysła
 To samo można osiągnąć przy użyciu `crontab`.
 
 ### `--hot`
-Parametr `--hot` służy do pobrania podstawowych informacji o gorących wpisach. Zwraca ID wpisu, datę i godzinę jego wstawienia oraz ilość plusów, które otrzymał.
+Parametr `--hot` służy do przeglądania gorących wpisów. Zwraca ID, autora, datę i godzinę, ilość plusów, i ewentualnie treść i załącznik (nie wszystkie wpisy posiadają treść i nie wszystkie mają załącznik).
+
+Aby poprawnie uzyć tego parametru należy wpisać np:
+
+`./mirkobash.sh --hot 1 24"` - gdzie `1` to strona pierwsza (może być druga czy dziesiąta), a `24` to okres czasu w godzinach, z których chcemy pobrać gorące wpisy.
+
+Zwrot będzie wyglądać w następujący sposób:
+
+```
+ID wpisu: 21372137
+Autor: Bielecki
+Data: 2019-02-27 00:21:37
+Ilość plusów: 2137
+
+Treść wpisu
+
+Ten wpis zawiera załącznik dostępny tutaj: <link>
+
+Czytać dalej? (Y/n/+)  
+```
+
+Jeśli użytkownik będzie potwierdzać, że chce czytać dalej, skrypt wypisze wszystkie wpisy z podanej strony, po czym zakończy działanie.
+
+Użytkownik może w każdej chwili przerwać przeglądanie odpowiadając literą `n` na pytanie "Czytać dalej", lub przerywając działanie skryptu kombinacją `^C`.
+
+#### Plusowanie
+Podczas przeglądania wpisów użytkownik może zdecydować by dać plus wpisowi. W takiej sytuacji na pytanie "Czytać dalej" może odpowiedzieć znakiem `+`, który spowoduje zaplusowanie wpisu i wyświetlenie kolejnego.
+
+### `--hot_stats`
+Parametr `--hot_stats` służy do pobrania podstawowych informacji o gorących wpisach. Zwraca ID wpisu, datę i godzinę jego wstawienia oraz ilość plusów, które otrzymał.
 
 Aby poprawnie użyć tego parametru należy skrypt wywołać np. w ten sposób:
-`./mirkobash.sh --hot 1 24` - gdzie `1` to strona pierwsza (może być druga czy dziesiąta), a `24` to okres czasu w godzinach, z których chcemy pobrać gorące wpisy. Okres czasu jest ustalany przez serwis Wykop, dlatego mimo że skrypt przyjmie każdą wartość, to Wykop ograniczy go do 24h, 12h lub 6h (z tego co mi wiadomo poprawnie działają też parametry od 1 do 5 godzin).
+`./mirkobash.sh --hot_stats 1 24` - gdzie `1` to strona pierwsza (może być druga czy dziesiąta), a `24` to okres czasu w godzinach, z których chcemy pobrać informacje o gorących wpisach. Okres czasu jest ustalany przez serwis Wykop, dlatego mimo że skrypt przyjmie każdą wartość, to Wykop ograniczy go do 24h, 12h lub 6h (z tego co mi wiadomo poprawnie działają też parametry od 1 do 5 godzin).
 
 Zwrócone informacje będą wyglądać w ten sposób:
 

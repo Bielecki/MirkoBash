@@ -30,6 +30,8 @@ if [ -n "$1" ]; then		# użytkownik podał parametr, więc sprawdźmy który to 
 		;;
 	--help | --usage | -h | -\? | -u)	usage; exit 0
 		;;
+	--newest)	newest
+		;;
 	* )	usage; exit 1
 		;;
 	esac
@@ -43,7 +45,8 @@ printf "%b\n" "MirkoBash v$version by $author" "Last updated: $lastupdate\n"
 printf "%s\n" "Dostępne opcje:" \
 	"--login: logowanie użytkownika, renowacja klucza" \
 	"--post \"(zawartość)\": wrzuca na mirko post z podaną zawartością" \
-	"--hot (strona) (czas: 6, 12 lub 24): zwraca ID, datę i ilość plusów postów z gorących"
+	"--hot (strona) (czas: 6, 12 lub 24): zwraca ID, datę i ilość plusów postów z gorących"\
+	"--newest: najnowsze wpisy z mikrobloga"
 }
 
 ## Sprawdzamy czy config w ogóle istnieje
@@ -122,7 +125,6 @@ done
 exit 0
 }
 
-
 hot_stats() {		# funkcja wyświetlania statystyk gorących
 if [ -z "$1" -o -z "$2" ]; then	# jeśli użytkownik nie podał parametrów, odeślij do usage
 	usage
@@ -140,6 +142,38 @@ curl -s -H "apisign: $md5all" -X GET "$url" | grep -oP '((?<="id":)[^,]*|(?<="da
 exit 0
 }
 
+newest() {         # funkcja wyświetlania najnowszych wpisów do czytania
+page="$1"       # pobieramy stronę z parametru
+firstid="$2"	# ID wpisu				Występuje problem z tymi dwoma paramterami. Jeśli wiesz jak to naprawić, napraw i wyślij do @Bielecki.
+url="https://a2.wykop.pl/Entries/Stream/page/$page/firstid/$firstid/appkey/$appkey/token/$token/userkey/$userkey/"
+sign
+content=$(curl -s -H "apisign: $md5all" -X GET "$url" | sed 's/,{"id"/\n{"id"/g')       # ładujemy cały content i dzielimy zwrotkę na linie, po jednym wpisie każda
+content_count=$(wc -l <<< "$content")   # liczymy ilość wpisów po ilości linii po podziale
+for ((i = 1; i <= "$content_count"; i++)); do   # otwieramy pętlę przez wszystkie wpisy
+        entry=$(sed -n "${i}p" <<< "$content")  # dzielenie wpisów na pojedyńcze
+        id=$(grep -oP '((?<="id":)[^,]*)' <<< "$entry") # ID wpisu
+        date=$(grep -oP '((?<="date":")[^"]*)' <<< "$entry")    # data
+        votes=$(grep -oP '((?<="vote_count":)[^,]*)' <<< "$entry")      # ilość plusów
+        body=$(grep -oP '((?<="body":")(\\"|[^"])*)' <<< "$entry" | sed 's,<br \\/>,,g;s,<a href=[^>]*>,,g;s,<\\/a>,,g;s,&quot;,",g' )  # treść wpisu
+        author=$(grep -oP '((?<="login":")(\\"|[^"])*)' <<< "$entry")   # autor
+        embed=$(grep -oP '((?<="url":")(\\"|[^"])*)' <<< "$entry" | sed 's,\\,,g')      # doawamie załącznika
+
+        printf "\n\033[1;33m%b\033[0;36m%b" "ID wpisu: " "$id" "Autor: " "$author" "Data: " "$date" "Ilość plusów: " "$votes"   # wypisywanie informacji o wpisie
+        printf "\033[0m"        # resetowanie koloru
+        if [ -n "$body" ]; then # sprawdzanie, body nie jest puste
+                printf "\n\n%b\n" "$body" # wypisywanie treśći wpisu
+        else    # body jest puste
+                printf "\n\n\033[1;31m%b\033[0m\n" "Ten wpis nie zawiera treści :("
+        fi
+        if [ -n "$embed" ]; then        # sprawdzanie czy jest załącznik
+                printf "\n\033[0;93m%b\033[0;36m%b\033[0m\n" "Ten wpis zawiera załącznik dostępny tutaj: " "$embed"
+        fi
+        echo ""; read -e -p "Czytać dalej? (Y/n/+)  " YN        # pytamy się użytkownika czy chce czytać dalej
+        [[ "$YN" == "n" || "$YN" == "N" ]] && break     # jeśli user stwierdzi że dość, to przerwij pętlę
+        [[ "$YN" == "+" ]] && like	# plusowanie
+done
+exit 0
+}																# najnowsze wpisy by @unweek
 
 login() {	# funkcja logująca użytkownika i dorzucająca userkey do configu
 if [ -s "$HOME/.config/mirkobash/login.conf" ]; then	# jeśli użytkownik wprowadził tam swoje dane logowania, wykorzystamy je
@@ -192,4 +226,4 @@ fi
 
 main "$@"	# po załadowaniu wszystkich configów etc, przenosimy użytkownika do ustalania jaki parametr wpisał
 exit 2	# na wszelki wypadek, gdyby użytkownik przypadkiem opuścił ifa
-
+ 

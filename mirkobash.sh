@@ -1,11 +1,13 @@
 #!/bin/bash
 
-author="Bielecki"
-version="0.0.7"
-lastupdate="27.02.2019"
+author="Bielecki & unweek"
+version="0.0.9"
+lastupdate="04.03.2019"
 
 ## Changelog
 #
+# 0.0.9 - added checking error function. Redesigned @unweek code, inserting tabs instead of spaces, fixing comments, etc.
+# 0.0.8 - added browsing newest entries - thanks to @unweek
 # 0.0.7 - added liking entries while reading hot pages
 # 0.0.6 - reading hot logic rebuilded, fixed no "body" issue
 # 0.0.5 - infos about entries and coloring some shit
@@ -28,9 +30,9 @@ if [ -n "$1" ]; then		# użytkownik podał parametr, więc sprawdźmy który to 
 		;;
 	--hot_stats) shift && hot_stats "$@"
 		;;
-	--help | --usage | -h | -\? | -u)	usage; exit 0
-		;;
 	--newest)	newest
+		;;
+	--help | --usage | -h | -\? | -u)	usage; exit 0
 		;;
 	* )	usage; exit 1
 		;;
@@ -79,12 +81,24 @@ md5all=$(echo -n "$secret$url$data2" | md5sum | awk '{print $1}')
 }
 
 
+check_errors() {	# sprawdzanie czy wystąpił błąd
+if grep -q "error\":" <<< "$content"; then	# jeśli wyłapiemy błąd, należy o tym poinformować użytkownika
+	errorcode=$(grep -oP '(?<="code":)[^,]*' <<< "$content")	# pobieranie errorcode
+	errormsg_en=$(grep -oP '(?<="message_en":")[^"]*' <<< "$content")	# pobieranie angielskiej wiadomości błędu
+	errormsg_pl=$(grep -oP '(?<="message_pl":")[^"]*' <<< "$content")	# pobieranie polskiej wiadomości błędu
+	printf "%b\n" "Wystąpił błąd!" "Kod błędu: $errorcode" "Treść błędu (en): $errormsg_en" "Treść błędu: $errormsg_pl"	# powiadomienie o błędzie użytkownika
+	exit "$errorcode"	# zwrot kodu błędu z wykopu do użytkownika - możliwie przydatne przy skryptach
+fi
+}
+
+
 like() {	# dawanie plusów wpisom
 url="https://a2.wykop.pl/Entries/VoteUp/$id/appkey/$appkey/token/$token/userkey/$userkey/"
 sign
 curl -s -H "apisign: $md5all" -X GET "$url" > /dev/null 2>&1	# curl zwraca listę wszystkich plusujących
-echo "Zaplusowano powyższy wpis"	# nie wiem jeszcze jak sprawdzać czy się powiodło
-sleep 1
+check_errors
+echo "Zaplusowano powyższy wpis"	# nie wiem jeszcze jak sprawdzać czy się powiodło. Czy powyższa funkcja rozwiązuje problem? Być może tak
+sleep 1	# damy użytkownikowi chwilę, żeby wiedział że się udało
 }
 
 
@@ -98,6 +112,7 @@ period="$2"	# pobieramy zakres czasu z parametru drugiego
 url="https://a2.wykop.pl/Entries/Hot/page/$page/period/$period/appkey/$appkey/token/$token/userkey/$userkey/"
 sign
 content=$(curl -s -H "apisign: $md5all" -X GET "$url" | sed 's/,{"id"/\n{"id"/g')	# ładujemy cały content i dzielimy zwrotkę na linie, po jednym wpisie każda
+check_errors
 content_count=$(wc -l <<< "$content")	# liczymy ilość wpisów po ilości linii po podziale
 for ((i = 1; i <= "$content_count"; i++)); do	# otwieramy pętlę przez wszystkie wpisy
 	entry=$(sed -n "${i}p" <<< "$content")	# ładujemy n-ty wpis jako pojedynczy wpis (a nie jako grupa)
@@ -139,41 +154,48 @@ if [ "$3" != "-s" ]; then	# jako trzeci parametr możemy dodać "-s", co wyciszy
 fi
 curl -s -H "apisign: $md5all" -X GET "$url" | grep -oP '((?<="id":)[^,]*|(?<="date":")[^"]*|(?<="vote_count":)[^,]*)' | sed 's/$/ /g' | awk 'ORS=NR%3?FS:RS'	# pobieramy i wyciągamy potrzebne dane, wyświetlamy w trzech kolumnach
 
+###
+# do przerobienia powyższy curl - trzeba uruchomić obsługę błędów, a także przy tym obsłużyć parametrs -s (silent), przydatny w skryptach
+###
+
 exit 0
 }
 
-newest() {         # funkcja wyświetlania najnowszych wpisów do czytania
-page="$1"       # pobieramy stronę z parametru
-firstid="$2"	# ID wpisu				Występuje problem z tymi dwoma paramterami. Jeśli wiesz jak to naprawić, napraw i wyślij do @Bielecki.
+newest() {	# funkcja wyświetlania najnowszych wpisów do czytania	### by @unweek
+page=""	# pobieramy stronę z parametru. Spróbujemy przekazać pusty parametr, bo i tak api to olewa
+firstid=""	# ID wpisu. Jak wyżej, olewamy parametr, jest niepotrzebny
 url="https://a2.wykop.pl/Entries/Stream/page/$page/firstid/$firstid/appkey/$appkey/token/$token/userkey/$userkey/"
 sign
-content=$(curl -s -H "apisign: $md5all" -X GET "$url" | sed 's/,{"id"/\n{"id"/g')       # ładujemy cały content i dzielimy zwrotkę na linie, po jednym wpisie każda
-content_count=$(wc -l <<< "$content")   # liczymy ilość wpisów po ilości linii po podziale
-for ((i = 1; i <= "$content_count"; i++)); do   # otwieramy pętlę przez wszystkie wpisy
-        entry=$(sed -n "${i}p" <<< "$content")  # dzielenie wpisów na pojedyńcze
-        id=$(grep -oP '((?<="id":)[^,]*)' <<< "$entry") # ID wpisu
-        date=$(grep -oP '((?<="date":")[^"]*)' <<< "$entry")    # data
-        votes=$(grep -oP '((?<="vote_count":)[^,]*)' <<< "$entry")      # ilość plusów
-        body=$(grep -oP '((?<="body":")(\\"|[^"])*)' <<< "$entry" | sed 's,<br \\/>,,g;s,<a href=[^>]*>,,g;s,<\\/a>,,g;s,&quot;,",g' )  # treść wpisu
-        author=$(grep -oP '((?<="login":")(\\"|[^"])*)' <<< "$entry")   # autor
-        embed=$(grep -oP '((?<="url":")(\\"|[^"])*)' <<< "$entry" | sed 's,\\,,g')      # doawamie załącznika
+content=$(curl -s -H "apisign: $md5all" -X GET "$url" | sed 's/,{"id"/\n{"id"/g')	# ładujemy cały content i dzielimy zwrotkę na linie, po jednym wpisie każda
+check_errors
+content_count=$(wc -l <<< "$content")	# liczymy ilość wpisów po ilości linii po podziale 
+printf "\n\033[1;33m%b\033[0;36m%b\033[0m\n" "Pobranych wpisów: " "$content_count"	# informujemy użytkownika o ilości pobranych wpisów, bo jest ich więcej niż w gorących
+sleep 1	# dajemy użytkownikowi chwilę, żeby zapoznał się z informacją
+for ((i = 1; i <= "$content_count"; i++)); do	# otwieramy pętlę przez wszystkie wpisy
+	entry=$(sed -n "${i}p" <<< "$content")	# dzielenie wpisów na pojedyńcze
+	id=$(grep -oP '((?<="id":)[^,]*)' <<< "$entry")	# ID wpisu
+	date=$(grep -oP '((?<="date":")[^"]*)' <<< "$entry")	# data
+	votes=$(grep -oP '((?<="vote_count":)[^,]*)' <<< "$entry")	# ilość plusów
+	body=$(grep -oP '((?<="body":")(\\"|[^"])*)' <<< "$entry" | sed 's,<br \\/>,,g;s,<a href=[^>]*>,,g;s,<\\/a>,,g;s,&quot;,",g' )	# treść wpisu
+	author=$(grep -oP '((?<="login":")(\\"|[^"])*)' <<< "$entry")	# autor
+	embed=$(grep -oP '((?<="url":")(\\"|[^"])*)' <<< "$entry" | sed 's,\\,,g')	# dodawanie załącznika
 
-        printf "\n\033[1;33m%b\033[0;36m%b" "ID wpisu: " "$id" "Autor: " "$author" "Data: " "$date" "Ilość plusów: " "$votes"   # wypisywanie informacji o wpisie
-        printf "\033[0m"        # resetowanie koloru
-        if [ -n "$body" ]; then # sprawdzanie, body nie jest puste
-                printf "\n\n%b\n" "$body" # wypisywanie treśći wpisu
-        else    # body jest puste
-                printf "\n\n\033[1;31m%b\033[0m\n" "Ten wpis nie zawiera treści :("
-        fi
-        if [ -n "$embed" ]; then        # sprawdzanie czy jest załącznik
-                printf "\n\033[0;93m%b\033[0;36m%b\033[0m\n" "Ten wpis zawiera załącznik dostępny tutaj: " "$embed"
-        fi
-        echo ""; read -e -p "Czytać dalej? (Y/n/+)  " YN        # pytamy się użytkownika czy chce czytać dalej
-        [[ "$YN" == "n" || "$YN" == "N" ]] && break     # jeśli user stwierdzi że dość, to przerwij pętlę
-        [[ "$YN" == "+" ]] && like	# plusowanie
+	printf "\n\033[1;33m%b\033[0;36m%b" "ID wpisu: " "$id" "Autor: " "$author" "Data: " "$date" "Ilość plusów: " "$votes"	# wypisywanie informacji o wpisie
+	printf "\033[0m"	# resetowanie koloru
+	if [ -n "$body" ]; then	# sprawdzanie, body nie jest puste
+		printf "\n\n%b\n" "$body"	# wypisywanie treści wpisu
+	else	# body jest puste
+		printf "\n\n\033[1;31m%b\033[0m\n" "Ten wpis nie zawiera treści :("
+	fi
+	if [ -n "$embed" ]; then	# sprawdzanie czy jest załącznik
+		printf "\n\033[0;93m%b\033[0;36m%b\033[0m\n" "Ten wpis zawiera załącznik dostępny tutaj: " "$embed"
+	fi
+	echo ""; read -e -p "Czytać dalej? (Y/n/+)  " YN	# pytamy się użytkownika czy chce czytać dalej
+	[[ "$YN" == "n" || "$YN" == "N" ]] && break	# jeśli user stwierdzi że dość, to przerwij pętlę
+	[[ "$YN" == "+" ]] && like	# plusowanie
 done
 exit 0
-}																# najnowsze wpisy by @unweek
+}
 
 login() {	# funkcja logująca użytkownika i dorzucająca userkey do configu
 if [ -s "$HOME/.config/mirkobash/login.conf" ]; then	# jeśli użytkownik wprowadził tam swoje dane logowania, wykorzystamy je
@@ -190,6 +212,9 @@ data="login=$LOGIN&password=$PASSWORD&accountkey=$token"
 data2="$LOGIN,$PASSWORD,$token"
 sign
 newuserkey=$(curl -s -H "apisign: $md5all" -X POST --data "$data" "$url" | grep -oP '(?<="userkey":")[^"]*')	# wyciągamy nowy userkey
+###
+# czy tutaj też powinniśmy obsłużyć błędy? Poniżej zwracamy tylko uogólniony błąd, jeśli nie dostaniemy userkey
+###
 if [ -z "$newuserkey" ]; then	# jeśli curl nie zwróci userkey, wyświetlamy że był błąd
 	echo "Error during login"
 	exit 1
@@ -209,19 +234,10 @@ data="body=$tresc"
 data2="$tresc"
 url="https://a2.wykop.pl/entries/add/appkey/$appkey/token/$token/userkey/$userkey/"
 sign
-
-response=$(curl -s -H "apisign: $md5all" -X POST --data "$data" "$url")	# generalnie pobieramy info czy się udało, czy wystąpił błąd
-
-if grep -q "error\":" <<< "$response"; then	# jeśli wyłapiemy błąd, należy o tym poinformować użytkownika
-        errorcode=$(grep -oP '(?<="code":)[^,]*' <<< "$response")
-        errormsg_en=$(grep -oP '(?<="message_en":")[^"]*' <<< "$response")
-        errormsg_pl=$(grep -oP '(?<="message_pl":")[^"]*' <<< "$response")
-        printf "%b\n" "Wystąpił błąd!" "Kod błędu: $errorcode" "Treść błędu (en): $errormsg_en" "Treść błędu: $errormsg_pl"
-	exit "$errorcode"
-else		# jeśli nie ma błędu - zwróć okejkę
-        echo "Done :)"
-	exit 0
-fi
+content=$(curl -s -H "apisign: $md5all" -X POST --data "$data" "$url")	# generalnie pobieramy info czy się udało, czy wystąpił błąd
+check_errors
+echo "Done :)"
+exit 0
 }
 
 main "$@"	# po załadowaniu wszystkich configów etc, przenosimy użytkownika do ustalania jaki parametr wpisał

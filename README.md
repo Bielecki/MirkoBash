@@ -99,6 +99,11 @@ Użytkownik może w każdej chwili przerwać przeglądanie odpowiadając literą
 #### Plusowanie
 Podczas przeglądania wpisów użytkownik może zdecydować by dać plus wpisowi. W takiej sytuacji na pytanie "Czytać dalej" może odpowiedzieć znakiem `+`, który spowoduje zaplusowanie wpisu i wyświetlenie kolejnego.
 
+## `--newest`
+Parametr `--newest` służy do przeglądania świeżych wpisów. Poza tym niewiele różni się od parametru `--hot`. Mimo że nie wymaga dodatkowych parametrów, takich jak numer strony, wygląd wpisów dla użytkownika pozostanie niezmienny. Tak jak przy przeglądaniu gorących wpisów, tak i tutaj użytkownik może zaplusować dowolny wpis.
+
+Ten fragment kodu zawdzięczam [@unweek](https://github.com/unweek/).
+
 ### `--hot_stats`
 Parametr `--hot_stats` służy do pobrania podstawowych informacji o gorących wpisach. Zwraca ID wpisu, datę i godzinę jego wstawienia oraz ilość plusów, które otrzymał.
 
